@@ -1,1 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Savings & Debt Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800">2026 Financial Tracker</h1>
+                <p class="text-slate-500">Goal: Kes. 5,000 by every 2nd Monday</p>
+            </div>
+            <div class="flex gap-3">
+                <div class="bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-lg">
+                    <span class="block text-xs opacity-80 uppercase font-bold">Current Goal</span>
+                    <span class="text-xl font-bold">Kes. 5,000</span>
+                </div>
+            </div>
+        </header>
 
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Progress & Daily Logs -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Progress Chart -->
+                <div class="glass-card p-6 rounded-3xl shadow-sm">
+                    <h2 class="text-lg font-bold text-slate-700 mb-4 text-center">Current Month Progress</h2>
+                    <canvas id="savingsChart"></canvas>
+                    <div id="chartLegend" class="mt-4 text-center text-sm font-semibold text-slate-600"></div>
+                </div>
+
+                <!-- Daily Contribution Log -->
+                <div class="glass-card p-6 rounded-3xl shadow-sm bg-white border border-blue-100">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4">Daily Savings Log</h2>
+                    <div class="flex gap-2 mb-4">
+                        <input type="number" id="dailyAmount" placeholder="Amount (Kes.)" class="flex-1 px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <button onclick="addDailySaving()" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 transition-colors">Add</button>
+                    </div>
+                    <div id="dailyLogList" class="space-y-2 max-h-48 overflow-y-auto pr-2">
+                        <!-- Daily logs here -->
+                        <p class="text-xs text-slate-400 text-center italic py-4">No savings logged yet today.</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center font-bold text-slate-800">
+                        <span>Logged Total:</span>
+                        <span id="loggedTotalText" class="text-blue-600 text-lg">Kes. 0</span>
+                    </div>
+                </div>
+
+                <!-- Debt Overview -->
+                <div class="glass-card p-6 rounded-3xl shadow-sm bg-slate-900 text-white">
+                    <h2 class="text-lg font-bold mb-4 text-slate-300">Total Liabilities</h2>
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="text-sm opacity-70">Total Debt</span>
+                        <span id="totalDebtLabel" class="text-2xl font-bold text-red-400">Kes. 0</span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-2">
+                        <div id="debtProgressBar" class="bg-red-500 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Schedule & Management -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Savings Table -->
+                <div class="glass-card rounded-3xl shadow-sm overflow-hidden border border-slate-200">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+                        <h2 class="text-xl font-bold text-slate-800">2026 Target Dates</h2>
+                        <span class="text-xs font-bold px-2 py-1 bg-green-100 text-green-700 rounded uppercase tracking-wide">Plan 5k</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                    <th class="px-6 py-4">Month</th>
+                                    <th class="px-6 py-4">Deadline</th>
+                                    <th class="px-6 py-4">Days</th>
+                                    <th class="px-6 py-4 text-right">Target Daily</th>
+                                    <th class="px-6 py-4 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="savingsBody" class="text-sm text-slate-600 divide-y divide-slate-100">
+                                <!-- JS Injected Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Debt Management Section -->
+                <div class="glass-card p-6 rounded-3xl shadow-sm bg-white">
+                    <h2 class="text-xl font-bold text-slate-800 mb-1">Debt Management</h2>
+                    <p class="text-sm text-slate-500 mb-6">List items you need to pay off.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <input type="text" id="debtName" placeholder="Debt Name (e.g., M-Shwari)" class="px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="number" id="debtAmount" placeholder="Amount (Kes.)" class="px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <button onclick="addDebt()" class="w-full bg-slate-800 hover:bg-black text-white font-bold py-3 rounded-xl transition-all shadow-md mb-6">Add Debt Record</button>
+                    
+                    <ul id="debtList" class="space-y-3">
+                        <!-- Debt items injected here -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const schedule = [
+            { m: "January", d: "Jan 12", w: 12, r: 417 },
+            { m: "February", d: "Feb 9", w: 28, r: 179 },
+            { m: "March", d: "Mar 9", w: 28, r: 179 },
+            { m: "April", d: "Apr 13", w: 35, r: 143 },
+            { m: "May", d: "May 11", w: 28, r: 179 },
+            { m: "June", d: "Jun 8", w: 28, r: 179 },
+            { m: "July", d: "Jul 13", w: 35, r: 143 },
+            { m: "August", d: "Aug 10", w: 28, r: 179 },
+            { m: "September", d: "Sep 14", w: 35, r: 143 },
+            { m: "October", d: "Oct 12", w: 28, r: 179 },
+            { m: "November", d: "Nov 9", w: 28, r: 179 },
+            { m: "December", d: "Dec 14", w: 35, r: 143 }
+        ];
+
+        let debts = [];
+        let dailySavings = []; // Array of { date: string, amount: number }
+        let currentTargetMonthIndex = 0;
+        let chart;
+
+        function init() {
+            renderSavingsTable();
+            renderChart();
+            updateDebtDisplay();
+            updateDailyLogDisplay();
+        }
+
+        function renderSavingsTable() {
+            const body = document.getElementById('savingsBody');
+            body.innerHTML = schedule.map((item, index) => `
+                <tr class="hover:bg-slate-50 transition-colors ${index === currentTargetMonthIndex ? 'bg-blue-50/50' : ''}">
+                    <td class="px-6 py-4 font-bold text-slate-800">${item.m}</td>
+                    <td class="px-6 py-4 text-slate-500">${item.d}</td>
+                    <td class="px-6 py-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-medium">${item.w} days</span></td>
+                    <td class="px-6 py-4 font-mono font-bold text-blue-600 text-right">Kes. ${item.r}</td>
+                    <td class="px-6 py-4 text-center">
+                        <button onclick="setCurrentMonth(${index})" class="text-xs font-bold ${index === currentTargetMonthIndex ? 'text-blue-600 underline' : 'text-slate-400 hover:text-blue-500'}">
+                            ${index === currentTargetMonthIndex ? 'Tracking...' : 'Track This'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('savingsChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Saved', 'Remaining'],
+                    datasets: [{
+                        data: [0, 5000],
+                        backgroundColor: ['#2563eb', '#e2e8f0'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    cutout: '80%',
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    }
+                }
+            });
+            updateProgressVisuals();
+        }
+
+        function setCurrentMonth(index) {
+            currentTargetMonthIndex = index;
+            // Clear current log for the new month simulation (In a real app, this would fetch from a DB)
+            dailySavings = [];
+            renderSavingsTable();
+            updateDailyLogDisplay();
+            updateProgressVisuals();
+        }
+
+        function addDailySaving() {
+            const amtInput = document.getElementById('dailyAmount');
+            const amt = parseFloat(amtInput.value);
+            
+            if (amt > 0) {
+                const now = new Date();
+                dailySavings.unshift({
+                    id: Date.now(),
+                    date: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    amount: amt
+                });
+                amtInput.value = '';
+                updateDailyLogDisplay();
+                updateProgressVisuals();
+            }
+        }
+
+        function deleteSaving(id) {
+            dailySavings = dailySavings.filter(s => s.id !== id);
+            updateDailyLogDisplay();
+            updateProgressVisuals();
+        }
+
+        function updateDailyLogDisplay() {
+            const list = document.getElementById('dailyLogList');
+            const totalText = document.getElementById('loggedTotalText');
+            
+            const total = dailySavings.reduce((sum, s) => sum + s.amount, 0);
+            totalText.innerText = `Kes. ${total.toLocaleString()}`;
+
+            if (dailySavings.length === 0) {
+                list.innerHTML = `<p class="text-xs text-slate-400 text-center italic py-4">No savings logged yet.</p>`;
+                return;
+            }
+
+            list.innerHTML = dailySavings.map(s => `
+                <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100 animate-in fade-in">
+                    <span class="text-xs font-medium text-slate-500">${s.date}</span>
+                    <span class="font-bold text-slate-700">Kes. ${s.amount}</span>
+                    <button onclick="deleteSaving(${s.id})" class="text-slate-300 hover:text-red-500">&times;</button>
+                </div>
+            `).join('');
+        }
+
+        function updateProgressVisuals() {
+            const total = dailySavings.reduce((sum, s) => sum + s.amount, 0);
+            const remaining = Math.max(0, 5000 - total);
+            
+            chart.data.datasets[0].data = [total, remaining];
+            chart.update();
+
+            const percent = ((total / 5000) * 100).toFixed(0);
+            document.getElementById('chartLegend').innerHTML = `
+                <span class="text-2xl block text-blue-600">${percent}%</span>
+                <span class="opacity-70 font-normal">of Kes. 5,000 Goal</span>
+            `;
+        }
+
+        // Debt Logic
+        function addDebt() {
+            const name = document.getElementById('debtName').value;
+            const amt = parseFloat(document.getElementById('debtAmount').value);
+            
+            if (name && amt) {
+                debts.push({ name, amt });
+                document.getElementById('debtName').value = '';
+                document.getElementById('debtAmount').value = '';
+                updateDebtDisplay();
+            }
+        }
+
+        function deleteDebt(index) {
+            debts.splice(index, 1);
+            updateDebtDisplay();
+        }
+
+        function updateDebtDisplay() {
+            const total = debts.reduce((sum, d) => sum + d.amt, 0);
+            document.getElementById('totalDebtLabel').innerText = `Kes. ${total.toLocaleString()}`;
+            
+            const bar = document.getElementById('debtProgressBar');
+            bar.style.width = total > 0 ? '100%' : '0%';
+
+            const list = document.getElementById('debtList');
+            if (debts.length === 0) {
+                list.innerHTML = `<p class="text-center text-slate-400 text-sm py-4 italic">No debts listed. You're clear!</p>`;
+                return;
+            }
+
+            list.innerHTML = debts.map((d, i) => `
+                <li class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <div>
+                        <span class="block font-bold text-slate-700">${d.name}</span>
+                        <span class="text-xs text-slate-400 font-mono">Kes. ${d.amt.toLocaleString()}</span>
+                    </div>
+                    <button onclick="deleteDebt(${i})" class="text-slate-300 hover:text-red-500 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </li>
+            `).join('');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
